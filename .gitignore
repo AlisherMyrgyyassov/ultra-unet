@@ -1,1 +1,5 @@
 /model.pth
+tests.ipynb
+input.npy
+utils/__pycache__/
+unet/__pycache__/

@@ -219,3 +219,42 @@ def animate_two(images, points_array, fps=3, filename="animation.gif", save_opti
 
     # Close the progress bar after completion
     progress_bar.close()
+
+def save_images_with_points(images, points_array, output_dir="output_images"):
+    """
+    Saves images with points plotted on top as JPEG files.
+
+    Args:
+    - images (list of numpy.ndarray): A list of 2D arrays, each representing an image.
+    - points_array (list of numpy.ndarray): A list of arrays, where each array contains points (as [x, y] coordinates) to plot on the corresponding image.
+    - output_dir (str): Directory to save the output images.
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    if isinstance(images[0], list):
+        images = [np.array(image) for image in images]
+    if isinstance(points_array[0], list):
+        points_array = [np.array(points) for points in points_array]
+
+    # Initialize a tqdm progress bar
+    progress_bar = tqdm(total=len(images), desc="Saving images")
+
+    for i, (image, points) in enumerate(zip(images, points_array)):
+        fig, ax = plt.subplots(figsize=(8, 8))
+        ax.imshow(image, cmap='gray')
+        ax.axis('off')
+
+        if points.size > 0:
+            ax.scatter(points[:, 0], points[:, 1], color='red', s=10)
+
+        # Save the figure
+        output_filename = os.path.join(output_dir, f"image_{i:03d}.jpg")
+        plt.savefig(output_filename, format='jpg', bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
+
+        # Update the progress bar
+        progress_bar.update(1)
+
+    # Close the progress bar after completion
+    progress_bar.close()
