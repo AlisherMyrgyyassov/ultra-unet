@@ -1,16 +1,14 @@
-# Tongue Contour Segmentation
-This project involves the segmentation of tongue contours from ultrasound video data using a U-Net model. The processed data can be output as a video, images, and/or as coordinate data in JSON format.
+# Tongue Contour Segmentation with UltraUNet
+This project involves the segmentation of tongue contours from ultrasound video data using a UltraUNet model. The processed data can be output as a video, images, and/or as coordinate data in JSON format.
 
 # Project Overview
-The main script, get_contour.py, processes video or NumPy-array input to segment tongue contours with a pre-trained 2D U-Net model (1 input channel, 1 output). The script includes options for cropping the video, outputting a processed video, and saving coordinate data.
+The main script, get_contour.py, processes video or NumPy-array input to segment tongue contours with a pre-trained 2D UltraUNet model (1 input channel, 1 output). The script includes options for cropping the video, outputting a processed video, and saving coordinate data in the json format. The model is robust and effective across different datasets with varying imaging quality, conditions, and noise levels. 
 
 # Installation
-Ensure you have Python 3.6+ and the necessary libraries installed. You can set up the environment by running:
-```
-pip install -r requirements.txt
-```
+Ensure you have Python 3.6+ and the necessary libraries installed. 
+
 >Note: Ensure you have access to a CUDA-compatible GPU for optimal performance.
-**To run the model, you need to request the latest checkpoint directly from me. Contact me to get the file.**
+**The GitHub Repo contains the .pth file of UltraUNet trained on all available data**
 
 # Usage
 To run the main processing script, use the following command:
@@ -32,6 +30,8 @@ Typically, a full segmentation task takes about 3 minutes on a 2-minute video.
 --no_output_coords: Use this flag to disable the coordinate output.
 --output_images:  Flag to output images.
 --no_output_images: Use this flag to disable the image output
+--histogram_matching: Flag to enable histogram matching (This usually improves the model's performance)
+--no_histogram_matching: Flag to disable histogram matching
 ```
 
 The output will depend on your selected flags. If the output video is enabled, then a video with a tongue contour on top of it will be processed and generated. It may take a while, though.
@@ -53,5 +53,9 @@ Single frame from a video output:
 <p align="center">
   <img src="https://github.com/user-attachments/assets/ee77b632-345f-416a-b4aa-265671a552dc"/>
 </p>
+
+# Citation
+If you would like to use this work or would like to know more about model validation results, methodology, and training pipeline, please refer to this paper:
+https://doi.org/10.48550/arXiv.2509.23225
 
 
