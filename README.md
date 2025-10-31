@@ -5,7 +5,7 @@ This project involves the segmentation of tongue contours from ultrasound video 
 The main script, get_contour.py, processes video or NumPy-array input to segment tongue contours with a pre-trained 2D UltraUNet model (1 input channel, 1 output). The script includes options for cropping the video, outputting a processed video, and saving coordinate data in the json format. The model is robust and effective across different datasets with varying imaging quality, conditions, and noise levels. 
 
 # Installation
-Ensure you have Python 3.6+ and the necessary libraries installed. 
+Ensure you have Python 3.11.7 and the necessary libraries installed. 
 
 >Note: Ensure you have access to a CUDA-compatible GPU for optimal performance.
 **The GitHub Repo contains the .pth file of UltraUNet trained on all available data**
@@ -18,7 +18,6 @@ cd [path to your folder]
 python get_contour.py --video_path [path to video]
 ```
 The progress bar will show the approximate time needed to finish segmentation.
-Typically, a full segmentation task takes about 3 minutes on a 2-minute video.
 
 ## Command-Line Arguments
 ```
@@ -44,18 +43,16 @@ The pipeline also automatically extracts only the largest connected area from yo
 Below are examples showcasing the script's functionality.
 Image sample output taken from the output folder:
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/9952142a-96b2-4b7c-bf3b-908cb955b988"/>
-</p>
+<img width="425" height="290" alt="Screenshot1" src="https://github.com/user-attachments/assets/20ef36a5-8eee-4683-bc1a-53696e308dfd" />
 
 
 Single frame from a video output:
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/ee77b632-345f-416a-b4aa-265671a552dc"/>
-</p>
+<img width="950" height="297" alt="Screenshot2" src="https://github.com/user-attachments/assets/1fcee05b-a3de-442b-a14a-d5754dd0dda2" />
 
 # Citation
 If you would like to use this work or would like to know more about model validation results, methodology, and training pipeline, please refer to this paper:
 https://doi.org/10.48550/arXiv.2509.23225
+
+
 
 
