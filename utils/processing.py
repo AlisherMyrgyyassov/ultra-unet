@@ -236,59 +236,10 @@ def perform_skeletonization(heatmap, threshold = 0.5):
     return skeleton
 
 
-# def dice_loss(pred, target, smooth = 1.):
-#     pred = pred.contiguous()
-#     target = target.contiguous()    
-#     intersection = (pred * target).sum(dim=2).sum(dim=2)
-#     loss = (1 - ((2. * intersection + smooth) / (pred.sum(dim=2).sum(dim=2) + target.sum(dim=2).sum(dim=2) + smooth)))
-#     return loss.mean()
-
-def dice_loss(pred, target, smooth=1.):
-    """
-    Dice loss calculation for 3D data.
-    
-    Args:
-        pred (torch.Tensor): Predicted outputs (after sigmoid), shape [N, C, D, H, W]
-        target (torch.Tensor): Ground truth labels, shape [N, C, D, H, W]
-        smooth (float): Smoothing factor to prevent division by zero.
-    
-    Returns:
-        torch.Tensor: Computed mean Dice loss.
-    """
-    pred = pred.contiguous()
-    target = target.contiguous()
-
-    # Calculate intersection and sums over all spatial dimensions: D, H, W
-    intersection = (pred * target).sum(dim=[2, 3, 4])
-    pred_sum = pred.sum(dim=[2, 3, 4])
-    target_sum = target.sum(dim=[2, 3, 4])
-
-    # Compute Dice coefficient
-    dice = (2. * intersection + smooth) / (pred_sum + target_sum + smooth)
-
-    # Dice loss
-    loss = 1 - dice
-    return loss.mean()
-
-def combined_loss(pred_logits, target, dice_weight=0.5, smooth=1.):
-    # Cross-Entropy loss expects raw logits, so we do not apply sigmoid here
-    ce_loss = F.cross_entropy(pred_logits, target)
-
-    # For Dice loss, apply sigmoid to get probabilities
-    pred_probs = torch.sigmoid(pred_logits)
-    
-    # Calculate Dice loss
-    dice = dice_loss(pred_probs, target.float(), smooth)
-    
-    # Combine losses
-    combined = dice_weight * dice + (1 - dice_weight) * ce_loss
-    
-    return combined
-
-
 def annotations_to_heatmap(annot, height=128, width=128, resolution=150, type = 'gauss', param = 3):
     # Extract x and y coordinates from the given data
-    interpol_coords = parametric_interpolation(annot, resolution)
+    if resolution != None: interpol_coords = parametric_interpolation(annot, resolution)
+    else: interpol_coords = np.array(annot)
 
     x = [coord[0] for coord in interpol_coords]
     y = [coord[1] for coord in interpol_coords]
@@ -301,28 +252,6 @@ def annotations_to_heatmap(annot, height=128, width=128, resolution=150, type = 
 
     return heatmap
 
-
-# Evaluation (need to load the model i guess)
-
-def find_nearest_point(point, sequence, pixels_per_mm = 1):
-    """
-    Find the nearest point in 'sequence' to the given 'point'.
-    
-    Parameters:
-    - point: A numpy array representing a single point (x, y).
-    - sequence: A numpy array of points to search for the nearest point.
-    
-    Returns:
-    - nearest_point: The nearest point found in 'sequence'.
-    - distance: The squared distance to the nearest point.
-    """
-
-    distances = np.sum(((sequence - point)/pixels_per_mm), axis=1)
-    nearest_idx = np.argmin(distances)
-    nearest_point = sequence[nearest_idx]
-    distance = distances[nearest_idx]
-    
-    return nearest_point, distance
 
 def msd(sequence_u, sequence_v):
     """
@@ -358,28 +287,6 @@ def msd(sequence_u, sequence_v):
     else: msd_value = np.inf
     
     return msd_value
-
-def msd_square(sequence_u, sequence_v):
-    """
-    Compute the Mean Squared Distance (MSD) between two sequences of points.
-    
-    Parameters:
-    - sequence_u: A numpy array of points representing sequence U. (interpolation)
-    - sequence_v: A numpy array of points representing sequence V. (skeletonization)
-    
-    Returns:
-    - msd: The Mean Squared Distance between sequences U and V.
-    """
-    sum_of_squared_distances = 0.0
-    
-    for point in sequence_u:
-        _, distance = find_nearest_point(point, sequence_v)
-        sum_of_squared_distances += distance**2
-    
-    # Compute the mean of the squared distances
-    msd = sum_of_squared_distances / len(sequence_u)
-    
-    return msd
 
 def skeleton_to_coordinates(heatmap):
     """
@@ -659,7 +566,7 @@ def resize_contour(contour, original_size, target_size):
 
 def resize_coordinates(input_json_path, output_json_path, original_size, new_size):
     """
-    Resize coordinates from a 512x512 image to a new size.
+    Resize coordinates from the original images size to a new size.
 
     Parameters:
     - input_json_path (str): Path to the input JSON file containing the original coordinates.
@@ -711,3 +618,87 @@ def resize_images(images, target_shape, save_file=None):
         np.save(save_file, resized_images)
 
     return resized_images
+
+
+import numpy as np
+
+def histogram_match_tensor_array(images, reference_cdf, ignore_zero=True):
+    """
+    Matches histograms of all images in a PyTorch tensor array to the reference CDF.
+    
+    Args:
+        images (torch.Tensor): PyTorch tensor of shape (N, H, W), where N is the number of images.
+        reference_cdf (np.ndarray): Reference CDF from the saved histogram data.
+        ignore_zero (bool): If True, ignore zero values in the histogram matching. Default is True.
+    
+    Returns:
+        torch.Tensor: Tensor of histogram-matched images with the same shape as the input.
+    """
+    import torch
+    
+    num_bins = 256  # For 8-bit grayscale images
+    matched_images = torch.zeros_like(images, dtype=torch.float32)  # Create an output tensor
+    
+    # Convert the input tensor to NumPy for processing
+    images_np = images.numpy() if isinstance(images, torch.Tensor) else images
+
+    for i, image in enumerate(images_np):
+        # Ensure the image is in the correct format (NumPy array, with integer pixel values)
+        if not np.issubdtype(image.dtype, np.integer):
+            image = (image * 255).astype(np.uint8)  # Scale [0, 1] tensors to [0, 255] integers
+        
+        # Compute the histogram and CDF of the target image
+        target_histogram, _ = np.histogram(image.ravel(), bins=num_bins, range=(0, 256))
+        target_cdf = np.cumsum(target_histogram)
+        target_cdf = target_cdf / target_cdf[-1]  # Normalize to [0, 1]
+        
+        # Create a mapping from target intensities to reference intensities
+        mapping = np.zeros(num_bins, dtype=np.uint8)
+        for target_intensity in range(num_bins):
+            if ignore_zero and target_intensity == 0:
+                mapping[target_intensity] = 0
+            else:
+                # Find the closest match in the reference CDF
+                diff = np.abs(reference_cdf - target_cdf[target_intensity])
+                closest_match = np.argmin(diff)
+                mapping[target_intensity] = closest_match
+        
+        # Apply the mapping to the image
+        matched_image = mapping[image]
+        
+        # Store the result back in the output tensor
+        matched_images[i] = torch.from_numpy(matched_image.astype(np.float32)) / 255.0  # Scale back to [0, 1]
+    
+    return matched_images
+
+
+def match_histogram_single(image, reference_cdf):
+    """
+    Matches the histogram of a single image to the reference CDF, ignoring zero values.
+
+    Args:
+        image (np.ndarray): Input grayscale image to be matched.
+        reference_cdf (np.ndarray): Reference CDF.
+
+    Returns:
+        np.ndarray: The histogram-matched image.
+    """
+    # Compute the histogram and CDF of the target image, ignoring zero values
+    num_bins = 256
+    mask = image > 0
+    target_histogram, _ = np.histogram(image[mask].ravel(), bins=num_bins, range=(0, 256))
+    target_cdf = np.cumsum(target_histogram)
+    target_cdf = target_cdf / target_cdf[-1]  # Normalize to [0, 1]
+
+    # Create a mapping from target intensities to reference intensities
+    mapping = np.zeros(num_bins, dtype=np.uint8)
+    for target_intensity in range(1, num_bins):  # Start from 1 to ignore zero values
+        # Find the closest match in the reference CDF
+        diff = np.abs(reference_cdf - target_cdf[target_intensity])
+        closest_match = np.argmin(diff)
+        mapping[target_intensity] = closest_match
+
+    # Apply the mapping to generate the matched image
+    matched_image = image.copy()
+    matched_image[mask] = mapping[image[mask]]
+    return matched_image

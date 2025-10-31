@@ -3,3 +3,7 @@ tests.ipynb
 input.npy
 utils/__pycache__/
 unet/__pycache__/
+stuff.ipynb
+utils/__pycache__/processing.cpython-311.pyc
+utils/__pycache__/video.cpython-311.pyc
+networks/__pycache__/ultra_unet.cpython-311.pyc
