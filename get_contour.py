@@ -36,8 +36,6 @@ def main():
                         help='Flag to enable histogram matching (default: True)')
     parser.add_argument('--no_histogram_matching', action='store_false', dest='histogram_matching',
                         help='Flag to disable histogram matching')
-    
-    # new ===============
     parser.add_argument('--save_input_array', action='store_true', default=False,
                         help='Flag to output original array (default: False)')
 
@@ -51,7 +49,7 @@ def main():
     save_input_array = args.save_input_array
     histogram_matching = args.histogram_matching
 
-    reference_data_path = r"D:\Alisher_Data\Reports\ultraunet-paper\checkpoints\histograms\mandarin-hist.pkl"
+    reference_data_path = r"mandarin-hist.pkl"
     import pickle
     from utils.processing import match_histogram_single
     with open(reference_data_path, 'rb') as file:
